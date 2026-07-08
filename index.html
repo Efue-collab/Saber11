@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Cuadro de Mando interactivo para el análisis estadístico, georreferenciado y de conglomerados de las pruebas Saber 11 de Colombia (1996 - 2025).">
+    <title>Saber 11: Cuadro de Mando Histórico (1996 - 2025)</title>
+    
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet.js CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+          
+    <!-- Custom Style Sheet (Vanilla CSS) -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- App Container -->
+    <div id="app-container">
+        <!-- Header -->
+        <header id="main-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-graduation-cap header-icon animate-pulse"></i>
+                <div class="logo-text">
+                    <span class="logo-title">SABER 11</span>
+                    <span class="logo-subtitle">Cuadro de Mando Histórico</span>
+                </div>
+            </div>
+            <div class="header-title-container">
+                <h1 id="app-heading">Análisis Multidimensional de la Educación en Colombia (1996 - 2025)</h1>
+                <p class="header-desc">Visualice 30 años de evolución académica, analice brechas geográficas y explore conglomerados socioeducativos.</p>
+            </div>
+            <div class="header-actions">
+                <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false" title="Cambiar entre modo claro y oscuro">
+                    <i class="fa-solid fa-moon"></i>
+                    <span>Modo oscuro</span>
+                </button>
+                <div class="header-badge">
+                    <span class="badge-text"><i class="fa-solid fa-database"></i> 9.1 GB de Datos ICFES</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loader overlay -->
+        <div id="loader-overlay">
+            <div class="loader-container">
+                <div class="spinner"></div>
+                <h3 class="loader-title">Cargando Datos de 30 Años...</h3>
+                <p class="loader-subtitle">Procesando registros agrupados a nivel municipal, mapas georreferenciados y conglomerados...</p>
+                <div class="progress-bar-container">
+                    <div id="loader-progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Body -->
+        <main id="main-content">
+            <!-- Sidebar Panel: Filters -->
+            <aside id="sidebar-filter-panel">
+                <div class="sidebar-header">
+                    <h2 class="sidebar-title"><i class="fa-solid fa-sliders"></i> Filtros de Análisis</h2>
+                    <button id="btn-clear-filters" class="btn-secondary" title="Reestablecer todos los filtros">
+                        <i class="fa-solid fa-rotate-left"></i> Limpiar
+                    </button>
+                </div>
+                
+                <div class="filter-scroll-container">
+                    <!-- Geographic Filters -->
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fa-solid fa-map-location-dot"></i> Entidad Territorial</label>
+                        <div class="select-wrapper">
+                            <select id="select-dept" class="filter-select">
+                                <option value="">Todos los Departamentos</option>
+                            </select>
+                        </div>
+                        <div class="select-wrapper mt-2">
+                            <select id="select-mcpio" class="filter-select" disabled>
+                                <option value="">Todos los Municipios</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Temporal Filters -->
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fa-solid fa-calendar-days"></i> Periodo Temporal</label>
+                        <div class="grid grid-2 mt-1">
+                            <div class="select-wrapper">
+                                <select id="select-year-start" class="filter-select" title="Año Inicial">
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <div class="select-wrapper">
+                                <select id="select-year-end" class="filter-select" title="Año Final">
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="select-wrapper mt-2">
+                            <select id="select-period-sem" class="filter-select">
+                                <option value="">Todos los Semestres (1 y 2)</option>
+                                <option value="1">Primer Semestre (Calendario B)</option>
+                                <option value="2">Segundo Semestre (Calendario A)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Socioeconomic Filters -->
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fa-solid fa-school"></i> Características del Colegio</label>
+                        <div class="select-wrapper">
+                            <select id="select-nature" class="filter-select">
+                                <option value="">Todas las Naturalezas</option>
+                                <option value="Oficial">Oficial (Público)</option>
+                                <option value="No Oficial">No Oficial (Privado)</option>
+                                <option value="NR">No Reportado (NR)</option>
+                            </select>
+                        </div>
+                        <div class="select-wrapper mt-2">
+                            <select id="select-area" class="filter-select">
+                                <option value="">Todas las Áreas</option>
+                                <option value="Urbano">Urbano</option>
+                                <option value="Rural">Rural</option>
+                                <option value="NR">No Reportado (NR)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Student Demographics -->
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fa-solid fa-user"></i> Datos del Estudiante</label>
+                        <div class="select-wrapper">
+                            <select id="select-gender" class="filter-select">
+                                <option value="">Ambos Géneros</option>
+                                <option value="Femenino">Femenino</option>
+                                <option value="Masculino">Masculino</option>
+                                <option value="NR">No Reportado (NR)</option>
+                            </select>
+                        </div>
+                        <div class="select-wrapper mt-2">
+                            <select id="select-stratum" class="filter-select">
+                                <option value="">Todos los Estratos</option>
+                                <option value="1">Estrato 1 (Bajo-bajo)</option>
+                                <option value="2">Estrato 2 (Bajo)</option>
+                                <option value="3">Estrato 3 (Medio-bajo)</option>
+                                <option value="4">Estrato 4 (Medio)</option>
+                                <option value="5">Estrato 5 (Medio-alto)</option>
+                                <option value="6">Estrato 6 (Alto)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Socioeconomic Context Filters -->
+                    <div class="filter-group">
+                        <label class="filter-label"><i class="fa-solid fa-house-chimney-user"></i> Contexto Socioeconómico</label>
+                        <div class="select-wrapper">
+                            <select id="select-hh-size" class="filter-select" title="Filtra departamentos y municipios según el tamaño promedio del hogar de sus estudiantes">
+                                <option value="">Todos los Tamaños de Hogar</option>
+                                <option value="small">Hogar Pequeño (1–3 personas)</option>
+                                <option value="medium">Hogar Mediano (4–5 personas)</option>
+                                <option value="large">Hogar Grande (6+ personas)</option>
+                            </select>
+                        </div>
+                        <div class="select-wrapper mt-2">
+                            <select id="select-father-edu" class="filter-select" title="Filtra según el nivel educativo promedio del padre">
+                                <option value="">Educación del Padre (todos)</option>
+                                <option value="low">Sin educación / Primaria</option>
+                                <option value="secondary">Secundaria / Bachillerato</option>
+                                <option value="technical">Técnica / Tecnológica</option>
+                                <option value="university">Universitaria o más</option>
+                            </select>
+                        </div>
+                        <div class="select-wrapper mt-2">
+                            <select id="select-mother-edu" class="filter-select" title="Filtra según el nivel educativo promedio de la madre">
+                                <option value="">Educación de la Madre (todos)</option>
+                                <option value="low">Sin educación / Primaria</option>
+                                <option value="secondary">Secundaria / Bachillerato</option>
+                                <option value="technical">Técnica / Tecnológica</option>
+                                <option value="university">Universitaria o más</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-footer">
+                    <p class="footer-note">Diseñado con <i class="fa-solid fa-heart text-red"></i> para una toma de decisiones informada y comprensible.</p>
+                </div>
+            </aside>
+
+            <!-- Dashboard Center Container -->
+            <section id="dashboard-center">
+                <!-- Navigation Tabs -->
+                <nav id="dashboard-tabs" class="glass-panel">
+                    <button class="tab-btn active" data-tab="resumen" id="tab-resumen-btn">
+                        <i class="fa-solid fa-chart-pie"></i> Resumen Geográfico
+                    </button>
+                    <button class="tab-btn" data-tab="tendencias" id="tab-tendencias-btn">
+                        <i class="fa-solid fa-chart-line"></i> Tendencias de 30 Años
+                    </button>
+                    <button class="tab-btn" data-tab="conglomerados" id="tab-conglomerados-btn">
+                        <i class="fa-solid fa-circle-nodes"></i> Conglomerados (Clustering)
+                    </button>
+                    <button class="tab-btn" data-tab="comparador" id="tab-comparador-btn">
+                        <i class="fa-solid fa-list-check"></i> Comparador Municipal
+                    </button>
+                </nav>
+
+                <!-- Dynamic Tab Content Views -->
+                <div id="tab-content-container">
+                    <div id="dashboard-refresh-overlay" class="dashboard-refresh-overlay" aria-live="polite" aria-hidden="true">
+                        <div class="refresh-overlay-card">
+                            <div class="spinner spinner-small"></div>
+                            <div>
+                                <strong>Actualizando cuadro</strong>
+                                <p>Aplicando filtros y recalculando métricas…</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 1: RESUMEN GENERAL -->
+                    <div id="view-resumen" class="tab-view active">
+                        <!-- KPI Row -->
+                        <div class="kpi-grid">
+                            <div class="kpi-card glass-panel border-glow-blue" id="kpi-evaluados" title="Total de estudiantes que rindieron la prueba en los filtros seleccionados">
+                                <div class="kpi-header">
+                                    <span class="kpi-title">Evaluados</span>
+                                    <i class="fa-solid fa-users kpi-icon text-blue"></i>
+                                </div>
+                                <div class="kpi-value text-blue" id="val-kpi-evaluados">-</div>
+                                <div class="kpi-footer">Estudiantes totales</div>
+                            </div>
+                            
+                            <div class="kpi-card glass-panel border-glow-purple" id="kpi-global" title="Puntaje Global Promedio (escala 0-500)">
+                                <div class="kpi-header">
+                                    <span class="kpi-title">Puntaje Global</span>
+                                    <i class="fa-solid fa-trophy kpi-icon text-purple"></i>
+                                </div>
+                                <div class="kpi-value text-purple" id="val-kpi-global">-</div>
+                                <div class="kpi-footer">Escala 0 - 500</div>
+                            </div>
+
+                            <div class="kpi-card glass-panel border-glow-green" id="kpi-mat" title="Promedio de Matemáticas (escala 0-100)">
+                                <div class="kpi-header">
+                                    <span class="kpi-title">Matemáticas</span>
+                                    <i class="fa-solid fa-calculator kpi-icon text-green"></i>
+                                </div>
+                                <div class="kpi-value text-green" id="val-kpi-mat">-</div>
+                                <div class="kpi-footer">Escala 0 - 100</div>
+                            </div>
+
+                            <div class="kpi-card glass-panel border-glow-orange" id="kpi-lec" title="Promedio de Lectura Crítica/Lenguaje (escala 0-100)">
+                                <div class="kpi-header">
+                                    <span class="kpi-title">Lectura / Lenguaje</span>
+                                    <i class="fa-solid fa-book-open kpi-icon text-orange"></i>
+                                </div>
+                                <div class="kpi-value text-orange" id="val-kpi-lec">-</div>
+                                <div class="kpi-footer">Escala 0 - 100</div>
+                            </div>
+
+                            <div class="kpi-card glass-panel border-glow-cyan" id="kpi-cna" title="Promedio de Ciencias Naturales (escala 0-100)">
+                                <div class="kpi-header">
+                                    <span class="kpi-title">Ciencias Naturales</span>
+                                    <i class="fa-solid fa-flask kpi-icon text-cyan"></i>
+                                </div>
+                                <div class="kpi-value text-cyan" id="val-kpi-cna">-</div>
+                                <div class="kpi-footer">Escala 0 - 100</div>
+                            </div>
+
+                            <div class="kpi-card glass-panel border-glow-yellow" id="kpi-soc" title="Promedio de Sociales y Ciudadanas (escala 0-100)">
+                                <div class="kpi-header">
+                                    <span class="kpi-title">Sociales</span>
+                                    <i class="fa-solid fa-landmark kpi-icon text-yellow"></i>
+                                </div>
+                                <div class="kpi-value text-yellow" id="val-kpi-soc">-</div>
+                                <div class="kpi-footer">Escala 0 - 100</div>
+                            </div>
+
+                            <div class="kpi-card glass-panel border-glow-pink" id="kpi-ing" title="Promedio de Inglés (escala 0-100)">
+                                <div class="kpi-header">
+                                    <span class="kpi-title">Inglés</span>
+                                    <i class="fa-solid fa-language kpi-icon text-pink"></i>
+                                </div>
+                                <div class="kpi-value text-pink" id="val-kpi-ing">-</div>
+                                <div class="kpi-footer">Escala 0 - 100</div>
+                            </div>
+                        </div>
+
+                        <!-- Map and Distribution Section -->
+                        <div class="main-dashboard-grid">
+                            <!-- Left: Interactive Map of Colombia -->
+                            <div class="map-card glass-panel">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fa-solid fa-earth-americas text-blue"></i> Georreferenciación de Resultados por Departamentos</h3>
+                                    <div class="map-metric-selector">
+                                        <label for="select-map-metric" class="sr-only">Métrica del Mapa</label>
+                                        <select id="select-map-metric" class="compact-select">
+                                            <option value="global">Puntaje Global Promedio</option>
+                                            <option value="mat">Promedio Matemáticas</option>
+                                            <option value="lec">Promedio Lectura / Lenguaje</option>
+                                            <option value="cna">Promedio Ciencias Naturales</option>
+                                            <option value="soc">Promedio Sociales</option>
+                                            <option value="ing">Promedio Inglés</option>
+                                            <option value="evaluados">Número de Evaluados</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="section-filter-summary" id="filter-summary-resumen">
+                                    <span class="section-filter-summary-title"><i class="fa-solid fa-filter"></i> Filtros aplicados</span>
+                                    <div class="filter-chip-list" id="filter-summary-resumen-list"></div>
+                                </div>
+                                <div class="map-container-wrapper">
+                                    <div id="colombia-map"></div>
+                                </div>
+                                <div class="map-legend-bar" id="map-legend">
+                                    <!-- Legend dynamically filled by JS -->
+                                </div>
+                                <p class="map-tip"><i class="fa-solid fa-circle-info"></i> Haga clic en un departamento para filtrar el cuadro de mando. Haga doble clic para quitar la selección.</p>
+                            </div>
+
+                            <!-- Right: Socioeconomic Context Distribution Charts -->
+                            <div class="context-cards-container">
+                                <!-- Donut: Public vs Private Schools -->
+                                <div class="chart-card glass-panel">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fa-solid fa-building-columns text-purple"></i> Naturaleza del Colegio</h3>
+                                    </div>
+                                    <div class="chart-wrapper donut-chart-wrapper">
+                                        <canvas id="chart-nature-distribution"></canvas>
+                                    </div>
+                                    <div class="chart-custom-legend" id="legend-nature"></div>
+                                </div>
+
+                                <!-- Donut: Rural vs Urban Schools -->
+                                <div class="chart-card glass-panel">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fa-solid fa-tree text-green"></i> Área de Ubicación</h3>
+                                    </div>
+                                    <div class="chart-wrapper donut-chart-wrapper">
+                                        <canvas id="chart-area-distribution"></canvas>
+                                    </div>
+                                    <div class="chart-custom-legend" id="legend-area"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom: Stratum and Gender Charts -->
+                        <div class="grid grid-2 mt-4">
+                            <div class="chart-card glass-panel">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fa-solid fa-stairs text-yellow"></i> Rendimiento por Estrato Socioeconómico</h3>
+                                </div>
+                                <div class="chart-wrapper bar-chart-wrapper">
+                                    <canvas id="chart-stratum-performance"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="chart-card glass-panel">
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fa-solid fa-venus-mars text-pink"></i> Comparativa de Rendimiento por Género</h3>
+                                </div>
+                                <div class="chart-wrapper bar-chart-wrapper">
+                                    <canvas id="chart-gender-performance"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 2: TENDENCIAS HISTÓRICAS (30 AÑOS) -->
+                    <div id="view-tendencias" class="tab-view">
+                        <div class="glass-panel p-4 mb-4">
+                            <div class="section-filter-summary" id="filter-summary-tendencias">
+                                <span class="section-filter-summary-title"><i class="fa-solid fa-filter"></i> Filtros aplicados</span>
+                                <div class="filter-chip-list" id="filter-summary-tendencias-list"></div>
+                            </div>
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fa-solid fa-chart-line text-blue"></i> Línea de Tendencia Histórica del Rendimiento (1996 - 2025)</h3>
+                                <div class="trend-subject-selector">
+                                    <label for="select-trend-subject" class="sr-only">Materia a Graficar</label>
+                                    <select id="select-trend-subject" class="compact-select">
+                                        <option value="global">Puntaje Global Equivalente</option>
+                                        <option value="mat">Matemáticas</option>
+                                        <option value="lec">Lectura / Lenguaje</option>
+                                        <option value="cna">Ciencias Naturales</option>
+                                        <option value="soc">Sociales</option>
+                                        <option value="ing">Inglés</option>
+                                        <option value="evaluados">Evaluados Totales</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="full-chart-wrapper mt-4">
+                                <canvas id="chart-trend-history"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Explanatory panel for Eras and Equivalency -->
+                        <div class="grid grid-2 gap-4">
+                            <div class="glass-panel p-4 info-card">
+                                <h4 class="info-card-title text-purple"><i class="fa-solid fa-vial-virus"></i> Unificación de la Serie Histórica</h4>
+                                <p class="info-card-text">
+                                    Las pruebas Saber 11 han modificado su estructura académica y su escala de puntajes 5 veces a lo largo de los últimos 30 años.
+                                    Para ofrecer una tendencia continua y comparable, esta aplicación calcula el <strong>Puntaje Global Equivalente (escala 0-500)</strong>
+                                    e individual (escala 0-100) mapeando los resultados históricos a las 5 materias nucleares de la prueba contemporánea:
+                                </p>
+                                <ul class="info-card-list">
+                                    <li><strong>Matemáticas:</strong> Mantenida de forma directa en todos los años.</li>
+                                    <li><strong>Lectura:</strong> Mapeada de <em>Lenguaje</em> (1996-2014) a <em>Lectura Crítica</em> (2014-2025).</li>
+                                    <li><strong>Ciencias Naturales:</strong> Promedio unificado de <em>Biología</em>, <em>Física</em> y <em>Química</em> para las eras antiguas.</li>
+                                    <li><strong>Sociales:</strong> Promedio de <em>Geografía</em> e <em>Historia</em> (con <em>Filosofía</em>) para periodos anteriores a 2014.</li>
+                                    <li><strong>Inglés:</strong> Integrada desde el año 2000. Para la Era 1 (1996-1999) se calcula la equivalencia sin penalizar la ausencia del test.</li>
+                                </ul>
+                            </div>
+
+                            <div class="glass-panel p-4 info-card">
+                                <h4 class="info-card-title text-cyan"><i class="fa-solid fa-clock-rotate-left"></i> Las 5 Eras del Examen Saber 11</h4>
+                                <div class="timeline-container">
+                                    <div class="timeline-item">
+                                        <span class="timeline-date">1996 - 1999</span>
+                                        <span class="timeline-title">Era 1: Estructura Clásica</span>
+                                        <p class="timeline-desc">Pruebas tradicionales de 8 materias básicas, sin inglés, escala de 0-100.</p>
+                                    </div>
+                                    <div class="timeline-item">
+                                        <span class="timeline-date">2000 - 2005</span>
+                                        <span class="timeline-title">Era 2: Introducción de Inglés</span>
+                                        <p class="timeline-desc">Inclusión formal del test de Idioma e Interdisciplinares. Escalas 0-100.</p>
+                                    </div>
+                                    <div class="timeline-item">
+                                        <span class="timeline-date">2006 - 2009</span>
+                                        <span class="timeline-title">Era 3: Componente Flexible</span>
+                                        <p class="timeline-desc">Profundizaciones a elección del estudiante y pruebas específicas de área.</p>
+                                    </div>
+                                    <div class="timeline-item">
+                                        <span class="timeline-date">2010 - 2014</span>
+                                        <span class="timeline-title">Era 4: Re-calibración</span>
+                                        <p class="timeline-desc">Ajuste técnico de preguntas y aplicación de puntajes recalificados (recaf).</p>
+                                    </div>
+                                    <div class="timeline-item">
+                                        <span class="timeline-date">2014 - 2025</span>
+                                        <span class="timeline-title">Era 5: Estructura Moderna</span>
+                                        <p class="timeline-desc">Formato actual unificado en 5 áreas clave y puntaje global unificado de 0 a 500.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 3: ANÁLISIS DE CONGLOMERADOS -->
+                    <div id="view-conglomerados" class="tab-view">
+                        <!-- Cluster Intro Card -->
+                        <div class="glass-panel p-4 mb-4">
+                            <h3 class="card-title text-purple"><i class="fa-solid fa-circle-nodes"></i> Patrones Territoriales: Análisis de Conglomerados (K-Means)</h3>
+                            <p class="mt-2 text-desc">
+                                Aplicando el algoritmo no supervisado <strong>K-Means (k=3)</strong>, hemos agrupado los departamentos de Colombia en 3 conglomerados homogéneos según sus características socioeducativas promedio durante el periodo de análisis.
+                                Este modelo identifica patrones profundos, demostrando de manera matemática y simple cómo los factores socioeconómicos determinan en gran parte el éxito académico regional en las pruebas de Estado.
+                            </p>
+                        </div>
+
+                        <!-- Cluster Details Grid -->
+                        <div class="main-dashboard-grid">
+                            <!-- Left: Scatter plot comparing departments on academic vs socioeconomic metrics -->
+                            <div class="chart-card glass-panel">
+                                <div class="section-filter-summary" id="filter-summary-cluster-scatter">
+                                    <span class="section-filter-summary-title"><i class="fa-solid fa-filter"></i> Filtros aplicados</span>
+                                    <div class="filter-chip-list" id="filter-summary-cluster-scatter-list"></div>
+                                </div>
+                                <div class="card-header">
+                                    <h3 class="card-title"><i class="fa-solid fa-chart-simple text-blue"></i> Gráfico de Dispersión: Desempeño Académico vs Contexto</h3>
+                                    <div class="scatter-axis-selector">
+                                        <label for="select-scatter-x" class="sr-only">Eje X</label>
+                                        <select id="select-scatter-x" class="compact-select">
+                                            <option value="pr">% de Colegios en Zona Rural</option>
+                                            <option value="po">% de Colegios Oficiales (Públicos)</option>
+                                            <option value="ps">% de Estudiantes en Estrato 1 y 2</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="scatter-chart-wrapper mt-4">
+                                    <canvas id="chart-cluster-scatter"></canvas>
+                                </div>
+                                <p class="chart-tip mt-2"><i class="fa-solid fa-lightbulb"></i> Cada punto representa un departamento de Colombia. El color indica el conglomerado al que pertenece. Pase el mouse sobre cada punto para ver su perfil detallado.</p>
+                            </div>
+
+                            <!-- Right: Explanation of the 3 Clusters and Department Selector -->
+                            <div class="glass-panel p-4 flex-col">
+                                <h3 class="card-title mb-4"><i class="fa-solid fa-layer-group text-purple"></i> Perfil de los Conglomerados Identificados</h3>
+                                
+                                <div class="cluster-profile-boxes">
+                                    <!-- High Cluster -->
+                                    <div class="cluster-box border-left-green">
+                                        <div class="cluster-box-header">
+                                            <span class="cluster-box-level badge-green">NIVEL ALTO</span>
+                                            <h4 class="cluster-box-name text-green" id="cluster-high-title">Alto Desempeño y Contexto Urbano/Privado</h4>
+                                        </div>
+                                        <p class="cluster-box-desc">Departamentos con puntajes promedio sobresalientes. Se caracterizan por tener un alto porcentaje de colegios privados (no oficiales), ubicados casi en su totalidad en zonas urbanas, y con mayor acceso a recursos socioeconómicos (estratos 3 a 6).</p>
+                                    </div>
+
+                                    <!-- Medium Cluster -->
+                                    <div class="cluster-box border-left-blue">
+                                        <div class="cluster-box-header">
+                                            <span class="cluster-box-level badge-blue">NIVEL MEDIO</span>
+                                            <h4 class="cluster-box-name text-blue" id="cluster-medium-title">Desempeño Medio y Estructura Mayoritaria Oficial</h4>
+                                        </div>
+                                        <p class="cluster-box-desc">Departamentos con puntajes promedio equilibrados. Cuentan con una fuerte base de educación oficial en cascos urbanos principales. Representan la realidad promedio de la infraestructura educativa pública en las principales ciudades intermedias del país.</p>
+                                    </div>
+
+                                    <!-- Low Cluster -->
+                                    <div class="cluster-box border-left-orange">
+                                        <div class="cluster-box-header">
+                                            <span class="cluster-box-level badge-orange">NIVEL VULNERABLE</span>
+                                            <h4 class="cluster-box-name text-orange" id="cluster-low-title">Bajo Desempeño y Vulnerabilidad Rural/Pública</h4>
+                                        </div>
+                                        <p class="cluster-box-desc">Departamentos rurales con puntajes promedio rezagados. La oferta escolar es abrumadoramente oficial y se ubica de forma dispersa en el territorio rural. Los estudiantes en estos departamentos presentan una alta concentración en niveles socioeconómicos vulnerables (estratos 1 y 2).</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Department Cluster Explorer list -->
+                        <div class="glass-panel p-4 mt-4">
+                            <div class="section-filter-summary" id="filter-summary-cluster-table">
+                                <span class="section-filter-summary-title"><i class="fa-solid fa-filter"></i> Filtros aplicados</span>
+                                <div class="filter-chip-list" id="filter-summary-cluster-table-list"></div>
+                            </div>
+                            <h3 class="card-title mb-3"><i class="fa-solid fa-magnifying-glass-chart text-cyan"></i> Explorador Territorial de Conglomerados</h3>
+                            <div class="cluster-table-filters mb-3">
+                                <button class="btn-cluster-filter active" data-level="ALL">Todos</button>
+                                <button class="btn-cluster-filter" data-level="Alto"><i class="fa-solid fa-circle text-green"></i> Alto</button>
+                                <button class="btn-cluster-filter" data-level="Medio"><i class="fa-solid fa-circle text-blue"></i> Medio</button>
+                                <button class="btn-cluster-filter" data-level="Vulnerable"><i class="fa-solid fa-circle text-orange"></i> Vulnerable</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="custom-table" id="table-cluster-departments">
+                                    <thead>
+                                        <tr>
+                                            <th>Departamento</th>
+                                            <th>Conglomerado</th>
+                                            <th>Puntaje Global Promedio</th>
+                                            <th>% Colegios Oficiales</th>
+                                            <th>% Colegios Rurales</th>
+                                            <th>% Estratos 1 y 2</th>
+                                            <th>Tamaño Hogar Prom.</th>
+                                            <th>Educ. Padre Prom.</th>
+                                            <th>Educ. Madre Prom.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-cluster-body">
+                                        <!-- Dynamically generated rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 4: COMPARADOR MUNICIPAL -->
+                    <div id="view-comparador" class="tab-view">
+                        <div class="main-dashboard-grid">
+                            <!-- Left: Top Municipalities Chart -->
+                            <div class="chart-card glass-panel">
+                                <div class="section-filter-summary" id="filter-summary-municipality">
+                                    <span class="section-filter-summary-title"><i class="fa-solid fa-filter"></i> Filtros aplicados</span>
+                                    <div class="filter-chip-list" id="filter-summary-municipality-list"></div>
+                                </div>
+                                <div class="card-header">
+                                    <h3 class="card-title" id="mcpio-chart-title"><i class="fa-solid fa-ranking-star text-green"></i> Top 10 Municipios Destacados</h3>
+                                    <div class="compare-metric-selector">
+                                        <label for="select-mcpio-metric" class="sr-only">Métrica</label>
+                                        <select id="select-mcpio-metric" class="compact-select">
+                                            <option value="global">Puntaje Global</option>
+                                            <option value="mat">Matemáticas</option>
+                                            <option value="lec">Lectura / Lenguaje</option>
+                                            <option value="cna">Ciencias Naturales</option>
+                                            <option value="soc">Sociales</option>
+                                            <option value="ing">Inglés</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="bar-chart-wrapper-large mt-4">
+                                    <canvas id="chart-municipality-ranking"></canvas>
+                                </div>
+                                <p class="chart-tip mt-2"><i class="fa-solid fa-info-circle"></i> Este gráfico compara el rendimiento escolar promedio de los 10 mejores municipios para los filtros seleccionados.</p>
+                            </div>
+
+                            <!-- Right: Detailed Municipalities Table -->
+                            <div class="glass-panel p-4 flex-col">
+                                <div class="card-header mb-3">
+                                    <h3 class="card-title"><i class="fa-solid fa-table-list text-blue"></i> Tabla de Municipios del Departamento Seleccionado</h3>
+                                    <input type="text" id="input-search-mcpio" class="compact-search-input" placeholder="Buscar municipio..." title="Filtrar municipios por nombre">
+                                </div>
+                                <div class="table-responsive flex-grow-1">
+                                    <table class="custom-table select-row-table" id="table-municipality-details">
+                                        <thead>
+                                            <tr>
+                                                <th>Municipio</th>
+                                                <th>Código</th>
+                                                <th>Evaluados</th>
+                                                <th>Puntaje Global</th>
+                                                <th>Matemáticas</th>
+                                                <th>Lectura</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-municipality-body">
+                                            <!-- Dynamically generated rows -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Leaflet.js Mapping Library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            
+    <!-- Chart.js for gorgeous interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Application Logic Script -->
+    <script src="app.js"></script>
+</body>
+</html>
